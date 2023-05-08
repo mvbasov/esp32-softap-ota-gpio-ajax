@@ -20,8 +20,11 @@
 							console.log(xhr.responseText); // 'This is the returned text.'
 							respJSON = JSON.parse(xhr.responseText);
 							document.querySelector('#spanLED').innerHTML = respJSON['led'];
+							document.querySelector('#svgLED').style.fill = respJSON['led']?"blue":"grey";
 							document.querySelector('#spanBlink').innerHTML = respJSON['blink'];
+							document.querySelector('#checkBoxBlink').innerHTML = respJSON['blink']?"&#x2611;":"&#x2610;";
 							document.querySelector('#spanKey').innerHTML = respJSON['key'];
+							document.querySelector('#svgKey').style.fill = respJSON['key']?"grey":"black";
 						} else {
 							console.log('Error: ' + xhr.status); // An error occurred during the request.
 						}
@@ -39,9 +42,18 @@
 			<button id="btn_blink" type="button" onclick="location.href='control.html?blink=false&led=1'">LED on</button><br />
 		</div>
 		<div>
-			<p>LED: <span id="spanLED">x</span></p>
-			<p>Blink: <span id="spanBlink">x</span></p>
-			<p>Key: <span id="spanKey">x</span></p>
+			<p>LED:
+				<span id="spanLED">x</span>
+				<svg id="svgLED" viewBox="0 0 10 10" height="18px" width="18px" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="4" />
+			</p>
+			<p>Blink:
+				<span id="spanBlink">x</span>
+				<span id="checkBoxBlink">x</span>
+			</p>
+			<p>Key:
+				<span id="spanKey">x</span>
+				<svg id="svgKey" viewBox="0 0 10 10" height="18px" width="18px" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="5" r="4" />
+			</p>
 		</div>
 	</body>
 </html>
