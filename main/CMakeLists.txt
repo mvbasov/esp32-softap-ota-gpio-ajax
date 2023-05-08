@@ -1,4 +1,5 @@
 idf_component_register(SRCS "main.c"
 	INCLUDE_DIRS "."
-	EMBED_TXTFILES web/index.html
+	EMBED_TXTFILES web/index.html web/control.html web/update.html
+
 )
