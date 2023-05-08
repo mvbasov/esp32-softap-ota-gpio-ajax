@@ -6,6 +6,30 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 		<title>ESP32 control GPIO</title>
+		<script>
+			function refreshState(){
+				var xhr = new XMLHttpRequest();
+				var respJSON;
+				xhr.open('GET', '/state');
+				xhr.send(null);
+				xhr.onreadystatechange = function () {
+					var DONE = 4; // readyState 4 means the request is done.
+					var OK = 200; // status 200 is a successful return.
+					if (xhr.readyState === DONE) {
+						if (xhr.status === OK) {
+							console.log(xhr.responseText); // 'This is the returned text.'
+							respJSON = JSON.parse(xhr.responseText);
+							document.querySelector('#spanLED').innerHTML = respJSON['led'];
+							document.querySelector('#spanBlink').innerHTML = respJSON['blink'];
+							document.querySelector('#spanKey').innerHTML = respJSON['key'];
+						} else {
+							console.log('Error: ' + xhr.status); // An error occurred during the request.
+						}
+					}
+				};
+			}
+			setInterval(refreshState, 500);
+		</script>
 	</head>
 	<body>
 		<h1>ESP32 control GPIO</h1>
@@ -13,6 +37,11 @@
 			<button id="btn_blink" type="button" onclick="location.href='control.html?blink=true'">Blink</button><br />
 			<button id="btn_blink" type="button" onclick="location.href='control.html?blink=false&led=0'">LED off</button><br />
 			<button id="btn_blink" type="button" onclick="location.href='control.html?blink=false&led=1'">LED on</button><br />
+		</div>
+		<div>
+			<p>LED: <span id="spanLED">x</span></p>
+			<p>Blink: <span id="spanBlink">x</span></p>
+			<p>Key: <span id="spanKey">x</span></p>
 		</div>
 	</body>
 </html>
