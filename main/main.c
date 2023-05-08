@@ -13,7 +13,9 @@
 
 #define tag "OnboardBlink"
 #define WIFI_SSID "ESP32 OTA Update"
+#define ESP_INTR_FLAG_DEFAULT 0
 #define ONBOARD_LED_GPIO 2
+#define ONBOARD_BOOT_KEY_GPIO 0
 #define EXAMPLE_HTTP_QUERY_KEY_MAX_LEN  (64)
 
 /*
@@ -27,8 +29,22 @@ extern const uint8_t ctl_html_start[] asm("_binary_control_html_start");
 extern const uint8_t ctl_html_end[] asm("_binary_control_html_end");
 
 TaskHandle_t taskOnboardBlink = NULL;
+char lineChar[40];
 bool led = false;
 bool blink = true;
+bool key = true;
+
+static void IRAM_ATTR gpio_isr_handler(void* arg)
+{
+        uint32_t gpio_num = (uint32_t) arg;
+        switch (gpio_num) {
+                case ONBOARD_BOOT_KEY_GPIO:
+			key = (bool) gpio_get_level(ONBOARD_BOOT_KEY_GPIO);
+                        break;
+                default:
+        }
+}
+
 
 esp_err_t index_get_handler(httpd_req_t *req)
 {
@@ -42,6 +58,14 @@ esp_err_t update_get_handler(httpd_req_t *req)
 	return ESP_OK;
 }
 
+esp_err_t state_get_handler(httpd_req_t *req)
+{
+	sprintf(&lineChar[0], "{\"key\":%d, \"led\":%d, \"blink\":%d }\n", key?1:0, led?1:0, blink?1:0);
+	httpd_resp_send(req, (const char *) &lineChar, strlen(lineChar));
+	ESP_LOGI(tag, "Key: %d; LED: %d; Blink: %d", key, led, blink);
+	return ESP_OK;
+}
+
 esp_err_t control_get_handler(httpd_req_t *req)
 {
 	char*  buf = NULL;
@@ -52,10 +76,10 @@ esp_err_t control_get_handler(httpd_req_t *req)
         	buf = malloc(buf_len);
 		if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
 			ESP_LOGI(tag, "Found URL query => %s", buf);
-			char param[EXAMPLE_HTTP_QUERY_KEY_MAX_LEN], dec_param[EXAMPLE_HTTP_QUERY_KEY_MAX_LEN] = {0};
+			char param[EXAMPLE_HTTP_QUERY_KEY_MAX_LEN] = {0};
 			if (httpd_query_key_value(buf, "led", param, sizeof(param)) == ESP_OK) {
 				ESP_LOGI(tag, "Found URL query parameter => led = %s", param);
-				if (strcmp(param, "0") == 0) led = true; else led = false; // Inverted but I dont know why.....
+				if (strcmp(param, "0") == 0) led = false; else led = true;
 				ESP_LOGI(tag, "LED state: %d", led);
 			}
 			if (httpd_query_key_value(buf, "blink", param, sizeof(param)) == ESP_OK) {
@@ -149,6 +173,13 @@ httpd_uri_t update_post = {
 	.user_ctx = NULL
 };
 
+httpd_uri_t state_get = {
+	.uri	  = "/state",
+	.method   = HTTP_GET,
+	.handler  = state_get_handler,
+	.user_ctx = NULL
+};
+
 static esp_err_t http_server_init(void)
 {
 	static httpd_handle_t http_server = NULL;
@@ -160,6 +191,7 @@ static esp_err_t http_server_init(void)
 		httpd_register_uri_handler(http_server, &update_get);
 		httpd_register_uri_handler(http_server, &control_get);
 		httpd_register_uri_handler(http_server, &update_post);
+		httpd_register_uri_handler(http_server, &state_get);
 	}
 
 	return http_server == NULL ? ESP_FAIL : ESP_OK;
@@ -199,13 +231,13 @@ static esp_err_t softap_init(void)
 void onboardBlink(void *ignore)
 {
         while(1){
-                if(led) {
-			gpio_set_level(ONBOARD_LED_GPIO, 0);
-                } else {
-			gpio_set_level(ONBOARD_LED_GPIO, 1);
-		}
 		if(blink)
 			led = !led;
+                if(led) {
+			gpio_set_level(ONBOARD_LED_GPIO, 1);
+                } else {
+			gpio_set_level(ONBOARD_LED_GPIO, 0);
+		}
                 vTaskDelay(5000/portTICK_PERIOD_MS);
         }
 }
@@ -245,6 +277,22 @@ void app_main(void) {
         //set as input mode
         io_conf.mode = GPIO_MODE_OUTPUT;
         gpio_config(&io_conf);
+
+	//interrupt of both edge
+	io_conf.intr_type = GPIO_INTR_ANYEDGE;
+	//bit mask of the pins
+	io_conf.pin_bit_mask = 1UL<<ONBOARD_BOOT_KEY_GPIO;
+	//set as input mode
+	io_conf.mode = GPIO_MODE_INPUT;
+	//enable pull-up mode
+	//io_conf.pull_up_en = 1;
+	gpio_config(&io_conf);
+
+	//install gpio isr service
+        gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+        //hook isr handler for specific gpio pin
+        gpio_isr_handler_add(ONBOARD_BOOT_KEY_GPIO, gpio_isr_handler, (void*)ONBOARD_BOOT_KEY_GPIO);
+
 
 	gpio_set_level(ONBOARD_LED_GPIO, 1);
 	ESP_LOGI(tag, "Start task: toggle onboard LED");
