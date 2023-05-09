@@ -30,10 +30,15 @@
 							document.querySelector('#sldPeriod').value = respJSON['period'];
 							document.querySelector('#svgKey').style.fill = respJSON['key']?"grey":"black";
 							document.querySelector('#spanResponce').innerHTML = xhr.responseText;
+							document.querySelector('#disconnected').innerHTML = "";
 						} else {
+							document.querySelector('#disconnected').innerHTML = "Disconnected";
 							console.log('Error: ' + xhr.status); // An error occurred during the request.
 						}
+					} else {
+						document.querySelector('#disconnected').innerHTML = "disconnected";
 					}
+
 				};
 			}
 			setInterval(refreshState, 500);
@@ -41,6 +46,7 @@
 	</head>
 	<body>
 		<h1>ESP32 control GPIO with AJAX</h1>
+		<span id="disconnected" style="color: red"></span>
 		<div>
 			<button id="btn_blink" type="button" onclick="setParam('blink=true')">Blink</button>
 			<span id="checkBoxBlink" style="font-size:2em; vertical-align: -0.2em;">x</span><br />
