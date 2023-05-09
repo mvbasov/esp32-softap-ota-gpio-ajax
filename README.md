@@ -1,3 +1,11 @@
+# Add control GPIO via Web with AJAX
+
+I use excelent [ESP32 Over-the-Air Updates in SoftAP mode](https://github.com/Jeija/esp32-softap-ota) example and extend it to demonstrate Web/AJAX GPIO control.
+
+This is not real hardware/software projest. This is log of my learning how to use web to control GPIO. I belive this will be useful to someone.
+
+The original project description the followed.
+
 # ESP32 Over-the-Air Updates in SoftAP mode
 This repository contains a minimal working example of an over-the-air (OTA) firmware updater where the ESP32 receives the update while acting as an HTTP server in SoftAP mode.
 It is meant to be used with [esp-idf](https://github.com/espressif/esp-idf), though it can also be integrated into [arduino-esp32](https://github.com/espressif/arduino-esp32) projects.
