@@ -15,6 +15,8 @@
 #define WIFI_SSID "ESP32 OTA Update"
 #define ESP_INTR_FLAG_DEFAULT 0
 #define ONBOARD_LED_GPIO 2
+#define MAX_PERIOD 10
+#define MIN_PERIOD 1
 #define ONBOARD_BOOT_KEY_GPIO 0
 #define EXAMPLE_HTTP_QUERY_KEY_MAX_LEN  (64)
 
@@ -29,10 +31,11 @@ extern const uint8_t ctl_html_start[] asm("_binary_control_html_start");
 extern const uint8_t ctl_html_end[] asm("_binary_control_html_end");
 
 TaskHandle_t taskOnboardBlink = NULL;
-char lineChar[40];
+char lineChar[50];
 bool led = false;
 bool blink = true;
 bool key = true;
+uint8_t period = 2;
 
 /*
  * Handle GPIO interrupts
@@ -102,6 +105,13 @@ esp_err_t control_get_handler(httpd_req_t *req)
 				ESP_LOGI(tag, "Found URL query parameter => blink = %s", param);
 				if (strcmp(param, "false") == 0) blink = false; else blink = true;
 				ESP_LOGI(tag, "Blink state: %d", blink);
+			}
+			if (httpd_query_key_value(buf, "period", param, sizeof(param)) == ESP_OK) {
+				ESP_LOGI(tag, "Found URL query parameter => period = %s", param);
+				period = (uint8_t)atoi(param);
+				if (period > MAX_PERIOD) period = MAX_PERIOD;
+				if (period < MIN_PERIOD) period = MIN_PERIOD;
+				ESP_LOGI(tag, "Period: %d", period);
 			}
 		}
 	}
@@ -174,9 +184,9 @@ httpd_uri_t update_post = {
 // URL: /state 
 esp_err_t state_get_handler(httpd_req_t *req)
 {
-	sprintf(&lineChar[0], "{\"key\":%d, \"led\":%d, \"blink\":%d }\n", key?1:0, led?1:0, blink?1:0);
+	sprintf(&lineChar[0], "{\"key\":%d, \"led\":%d, \"blink\":%d, \"period\":%hu }", key?1:0, led?1:0, blink?1:0, period);
 	httpd_resp_send(req, (const char *) &lineChar, strlen(lineChar));
-	ESP_LOGI(tag, "Key: %d; LED: %d; Blink: %d", key, led, blink);
+	ESP_LOGI(tag, "Key: %d; LED: %d; Blink: %d; Period: %d", key, led, blink, period);
 	return ESP_OK;
 }
 httpd_uri_t state_get = {
@@ -250,7 +260,7 @@ void onboardBlink(void *ignore)
                 } else {
 			gpio_set_level(ONBOARD_LED_GPIO, 0);
 		}
-                vTaskDelay(5000/portTICK_PERIOD_MS);
+                vTaskDelay(((period*1000/2))/portTICK_PERIOD_MS);
         }
 }
 
