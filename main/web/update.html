@@ -36,6 +36,8 @@
 					xhr.upload.onprogress = function (e) {
 						var progress = document.getElementById("progress");
 						progress.textContent = "Progress: " + (e.loaded / e.total * 100).toFixed(0) + "%";
+						var progress = document.getElementById("progressBar");
+						progress.value = (e.loaded / e.total * 100).toFixed(0);
 					};
 					xhr.open("POST", "/update", true);
 					xhr.send(file);
