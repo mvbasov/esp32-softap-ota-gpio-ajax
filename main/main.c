@@ -34,9 +34,16 @@ bool led = false;
 bool blink = true;
 bool key = true;
 
+/*
+ * Handle GPIO interrupts
+ */
 static void IRAM_ATTR gpio_isr_handler(void* arg)
 {
         uint32_t gpio_num = (uint32_t) arg;
+	/* This handle for GPIO interrupt processing as example
+	 * The handler modify global variable. Real application may use queue for it
+	 * The global variable may be replaced by direct check of GPIO state
+	 */
         switch (gpio_num) {
                 case ONBOARD_BOOT_KEY_GPIO:
 			key = (bool) gpio_get_level(ONBOARD_BOOT_KEY_GPIO);
@@ -45,27 +52,36 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
         }
 }
 
-
+/*
+ * HTTP Server
+ */
+// URL: / or /index.html
 esp_err_t index_get_handler(httpd_req_t *req)
 {
 	httpd_resp_send(req, (const char *) index_html_start, index_html_end - index_html_start);
 	return ESP_OK;
 }
+httpd_uri_t index_get = {
+	.uri	  = "/",
+	.method   = HTTP_GET,
+	.handler  = index_get_handler,
+	.user_ctx = NULL
+};
 
+// URL: /update.html
 esp_err_t update_get_handler(httpd_req_t *req)
 {
 	httpd_resp_send(req, (const char *) update_html_start, update_html_end - update_html_start);
 	return ESP_OK;
 }
+httpd_uri_t update_get = {
+	.uri	  = "/update.html",
+	.method   = HTTP_GET,
+	.handler  = update_get_handler,
+	.user_ctx = NULL
+};
 
-esp_err_t state_get_handler(httpd_req_t *req)
-{
-	sprintf(&lineChar[0], "{\"key\":%d, \"led\":%d, \"blink\":%d }\n", key?1:0, led?1:0, blink?1:0);
-	httpd_resp_send(req, (const char *) &lineChar, strlen(lineChar));
-	ESP_LOGI(tag, "Key: %d; LED: %d; Blink: %d", key, led, blink);
-	return ESP_OK;
-}
-
+// URL: /control.html
 esp_err_t control_get_handler(httpd_req_t *req)
 {
 	char*  buf = NULL;
@@ -93,7 +109,14 @@ esp_err_t control_get_handler(httpd_req_t *req)
 	httpd_resp_send(req, (const char *) ctl_html_start, ctl_html_end - ctl_html_start);
 	return ESP_OK;
 }
+httpd_uri_t control_get = {
+	.uri	  = "/control.html",
+	.method   = HTTP_GET,
+	.handler  = control_get_handler,
+	.user_ctx = NULL
+};
 
+// URL: /update 
 /*
  * Handle OTA file upload
  */
@@ -141,31 +164,6 @@ esp_err_t update_post_handler(httpd_req_t *req)
 
 	return ESP_OK;
 }
-
-/*
- * HTTP Server
- */
-httpd_uri_t index_get = {
-	.uri	  = "/",
-	.method   = HTTP_GET,
-	.handler  = index_get_handler,
-	.user_ctx = NULL
-};
-
-httpd_uri_t update_get = {
-	.uri	  = "/update.html",
-	.method   = HTTP_GET,
-	.handler  = update_get_handler,
-	.user_ctx = NULL
-};
-
-httpd_uri_t control_get = {
-	.uri	  = "/control.html",
-	.method   = HTTP_GET,
-	.handler  = control_get_handler,
-	.user_ctx = NULL
-};
-
 httpd_uri_t update_post = {
 	.uri	  = "/update",
 	.method   = HTTP_POST,
@@ -173,6 +171,14 @@ httpd_uri_t update_post = {
 	.user_ctx = NULL
 };
 
+// URL: /state 
+esp_err_t state_get_handler(httpd_req_t *req)
+{
+	sprintf(&lineChar[0], "{\"key\":%d, \"led\":%d, \"blink\":%d }\n", key?1:0, led?1:0, blink?1:0);
+	httpd_resp_send(req, (const char *) &lineChar, strlen(lineChar));
+	ESP_LOGI(tag, "Key: %d; LED: %d; Blink: %d", key, led, blink);
+	return ESP_OK;
+}
 httpd_uri_t state_get = {
 	.uri	  = "/state",
 	.method   = HTTP_GET,
@@ -180,6 +186,9 @@ httpd_uri_t state_get = {
 	.user_ctx = NULL
 };
 
+/*
+ * Setup web server pages
+ */
 static esp_err_t http_server_init(void)
 {
 	static httpd_handle_t http_server = NULL;
@@ -228,6 +237,9 @@ static esp_err_t softap_init(void)
 	return res;
 }
 
+/*
+ * Blink onboard LED task
+ */
 void onboardBlink(void *ignore)
 {
         while(1){
@@ -241,8 +253,6 @@ void onboardBlink(void *ignore)
                 vTaskDelay(5000/portTICK_PERIOD_MS);
         }
 }
-
-
 
 void app_main(void) {
 	esp_err_t ret = nvs_flash_init();
@@ -270,7 +280,7 @@ void app_main(void) {
         /* GPIO SETUP */
 	//zero-initialize the config structure.
         gpio_config_t io_conf = {};
-        //interrupt of rising edge
+        //interrupt disabled
         io_conf.intr_type = GPIO_INTR_DISABLE;
         //bit mask of the pins
         io_conf.pin_bit_mask = 1ULL<<ONBOARD_LED_GPIO;
@@ -292,7 +302,6 @@ void app_main(void) {
         gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
         //hook isr handler for specific gpio pin
         gpio_isr_handler_add(ONBOARD_BOOT_KEY_GPIO, gpio_isr_handler, (void*)ONBOARD_BOOT_KEY_GPIO);
-
 
 	gpio_set_level(ONBOARD_LED_GPIO, 1);
 	ESP_LOGI(tag, "Start task: toggle onboard LED");
