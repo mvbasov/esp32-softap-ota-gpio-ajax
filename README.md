@@ -1,6 +1,11 @@
 # Add control GPIO via Web with AJAX
 
 I use excelent [ESP32 Over-the-Air Updates in SoftAP mode](https://github.com/Jeija/esp32-softap-ota) example and extend it to demonstrate Web/AJAX GPIO control.
+![Screenshot new](screenshot_new.png)
+
+The left blue/grey circle represents onboard LED state (GPIO 2)
+
+The right black/grey circle represents onboard "boot" key (GPIO 0)
 
 This is not real hardware/software projest. This is log of my learning how to use web to control GPIO. I belive this will be useful to someone.
 
