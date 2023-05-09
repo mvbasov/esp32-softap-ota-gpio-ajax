@@ -70,6 +70,12 @@ httpd_uri_t index_get = {
 	.handler  = index_get_handler,
 	.user_ctx = NULL
 };
+httpd_uri_t index_html_get = {
+	.uri	  = "/index.html",
+	.method   = HTTP_GET,
+	.handler  = index_get_handler,
+	.user_ctx = NULL
+};
 
 // URL: /update.html
 esp_err_t update_get_handler(httpd_req_t *req)
@@ -207,6 +213,7 @@ static esp_err_t http_server_init(void)
 
 	if (httpd_start(&http_server, &config) == ESP_OK) {
 		httpd_register_uri_handler(http_server, &index_get);
+		httpd_register_uri_handler(http_server, &index_html_get);
 		httpd_register_uri_handler(http_server, &update_get);
 		httpd_register_uri_handler(http_server, &control_get);
 		httpd_register_uri_handler(http_server, &update_post);
